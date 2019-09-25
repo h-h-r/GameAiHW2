@@ -66,8 +66,8 @@ public class MapStateManager : MonoBehaviour {
         spawnedNPCs = new List<GameObject>();
         spawnedNPCs.Add(SpawnItem(spawner1, HunterPrefab, null, SpawnText1, 4));
         
-        Invoke("SpawnWolf", 12);
-        Invoke("Meeting1", 30);
+        Invoke("SpawnWolf", 5);
+        Invoke("Meeting1", 10);
     }
 
     /// <summary>
@@ -142,20 +142,22 @@ public class MapStateManager : MonoBehaviour {
                     }
                     break;
                 case 1:
-                    if (Vector3.Distance(spawnedNPCs[1].transform.position, spawnedNPCs[0].transform.position) < 2)
-                    {
-                        narrator.text = "Both the Hunter and Wolf move to another area. Little Red arrives and moves to her house.";
-                        spawnedNPCs[0].GetComponent<NPCController>().label.enabled = false;
-                        spawnedNPCs[0].GetComponent<NPCController>().DestroyPoints();
-                        spawnedNPCs[0].SetActive(false);
-                        spawnedNPCs[1].GetComponent<NPCController>().label.enabled = false;
-                        spawnedNPCs[1].GetComponent<NPCController>().DestroyPoints();
-                        spawnedNPCs[1].SetActive(false);
-                        spawnedNPCs.Add(SpawnItem(spawner3, RedPrefab, null, SpawnText3, 5));
-                        CreatePath();
-                        Invoke("SpawnWolf2", 10);
-                        currentPhase++;
-                    }
+                    narrator.text = "pressed 1";
+                    EnterMapStateOne();
+                    //if (Vector3.Distance(spawnedNPCs[1].transform.position, spawnedNPCs[0].transform.position) < 2)
+                    //{
+                    //    narrator.text = "Both the Hunter and Wolf move to another area. Little Red arrives and moves to her house.";
+                    //    spawnedNPCs[0].GetComponent<NPCController>().label.enabled = false;
+                    //    spawnedNPCs[0].GetComponent<NPCController>().DestroyPoints();
+                    //    spawnedNPCs[0].SetActive(false);
+                    //    spawnedNPCs[1].GetComponent<NPCController>().label.enabled = false;
+                    //    spawnedNPCs[1].GetComponent<NPCController>().DestroyPoints();
+                    //    spawnedNPCs[1].SetActive(false);
+                    //    spawnedNPCs.Add(SpawnItem(spawner3, RedPrefab, null, SpawnText3, 5));
+                    //    CreatePath();
+                    //    Invoke("SpawnWolf2", 10);
+                    //    currentPhase++;
+                    //}
                     break;
                 case 2:
                     if (spawnedNPCs.Count > 3 && Vector3.Distance(spawnedNPCs[2].transform.position, spawnedNPCs[3].transform.position) < 12)
@@ -216,11 +218,19 @@ public class MapStateManager : MonoBehaviour {
     }
 
     private void EnterMapStateOne() {
-        narrator.text = "In Phase One, we're going to ...";
+        narrator.text = "MapState one";
 
-        //currentPhase = 2; // or whatever. Won't necessarily advance the phase every time
+        currentPhase = 4;
+        previousPhase = 4;
 
-        //spawnedNPCs.Add(SpawnItem(spawner2, WolfPrefab, null, SpawnText2, 4));
+        spawnedNPCs.ForEach(Destroy);
+
+        GameObject wolf = SpawnItem(spawner2, WolfPrefab, null, SpawnText2, 1);
+        GameObject hunter = SpawnItem(spawner1, HunterPrefab, wolf.GetComponent<NPCController>(), SpawnText1, 1);
+
+
+        spawnedNPCs.Add(hunter);
+        spawnedNPCs.Add(wolf);
     }
 
     private void EnterMapStateTwo()

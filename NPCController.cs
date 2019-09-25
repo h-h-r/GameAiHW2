@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+using UnityEditor;
+
 public class NPCController : MonoBehaviour {
     // Store variables for objects
     private SteeringBehavior ai;    // Put all the brains for steering in its own module
@@ -25,11 +27,13 @@ public class NPCController : MonoBehaviour {
 
     public Text label;              // Used to displaying text nearby the agent as it moves around
     LineRenderer line;              // Used to draw circles and other things
+    LineRenderer ray;
 
     private void Start() {
         ai = GetComponent<SteeringBehavior>();
         rb = GetComponent<Rigidbody>();
         line = GetComponent<LineRenderer>();
+        ray = GetComponent<LineRenderer>();
         position = rb.position;
         orientation = transform.eulerAngles.y;
     }
@@ -44,13 +48,27 @@ public class NPCController : MonoBehaviour {
                 if (label) {
                     // replace "First algorithm" with the name of the actual algorithm you're demoing
                     // do this for each phase
-                    label.text = name.Replace("(Clone)","") + "\nAlgorithm: First algorithm"; 
+                    label.text = ""; 
                 }
-                linear = ai.Pursue();   // For example
-                angular = ai.Face();    // For example
-
-                // linear = ai.whatever();  -- replace with the desired calls
-                // angular = ai.whatever();
+                if (ai.tag == "Hunter")
+                {
+                    
+                    linear = ai.maxSpeed * new Vector3(Mathf.Sin(ai.GetComponent<NPCController>().orientation), 0, Mathf.Cos(ai.GetComponent<NPCController>().orientation));
+                    //angular = ai.Wander();
+                    //ai.PerformWhisker();
+                    (linear,angular) = ai.WanderWithAvoidence();
+                    
+                    //RaycastHit hitInfo;
+                    //if (ai.PerformWhisker(out hitInfo))
+                    //{
+                    //    //perform avoidence
+                    //    ai.
+                    //}
+                    //else
+                    //{
+                    //    angular = ai.Wander();
+                    //}
+                }
                 break;
             case 2:
                 if (label) {
@@ -117,7 +135,7 @@ public class NPCController : MonoBehaviour {
     /// <param name="radius">Desired radius of the concentric circle</param>
     public void DrawConcentricCircle(float radius) {
         line.positionCount = 51;
-        line.useWorldSpace = false;
+        line.useWorldSpace = true;
         float x;
         float z;
         float angle = 20f;
@@ -157,5 +175,28 @@ public class NPCController : MonoBehaviour {
         if (line) {
             line.positionCount = 0;
         }
+    }
+
+    //hhr
+    public void DrawWhiskers(Vector3 left, Vector3 right, Vector3 orig)
+    {
+        line.positionCount = 5;
+        line.useWorldSpace = true;
+
+        line.SetPosition(0, orig);
+        line.SetPosition(1, left);
+        line.SetPosition(2, orig);
+        line.SetPosition(3, right);
+        line.SetPosition(4, orig);
+
+
+        //line.positionCount = 2;
+        //line.useWorldSpace = true;
+
+        //line.SetPosition(0, right);
+        //line.SetPosition(1, orig);
+        //line.SetPosition(2, orig);
+        //line.SetPosition(3, right);
+        //line.SetPosition(4, orig);
     }
 }
