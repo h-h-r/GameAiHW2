@@ -58,7 +58,7 @@ public class MapStateManager : MonoBehaviour {
     void Start() {
         narrator.text = "This is the place to mention major things going on during the demo, the \"narration.\"";
 
-        TreeCount = 100;    // TreeCount isn't showing up in Inspector
+        TreeCount = 20;    // TreeCount isn't showing up in Inspector
 
         trees = new List<GameObject>();
         SpawnTrees(TreeCount);
@@ -160,16 +160,18 @@ public class MapStateManager : MonoBehaviour {
                     //}
                     break;
                 case 2:
-                    if (spawnedNPCs.Count > 3 && Vector3.Distance(spawnedNPCs[2].transform.position, spawnedNPCs[3].transform.position) < 12)
-                    {
-                        narrator.text = "Little Red notices the Wolf and moves toward it.";
-                        spawnedNPCs[2].GetComponent<SteeringBehavior>().target = spawnedNPCs[3].GetComponent<NPCController>();
-                        SetArrive(spawnedNPCs[2]);
-                        SetArrive(spawnedNPCs[3]);
-                        Invoke("Meeting2", 7);
-                        currentPhase++;
-                    }
-                    break;
+                    narrator.text = "pressed 1";
+                    EnterMapStateTwo();
+                    //if (spawnedNPCs.Count > 3 && Vector3.Distance(spawnedNPCs[2].transform.position, spawnedNPCs[3].transform.position) < 12)
+                    //{
+                    //    narrator.text = "Little Red notices the Wolf and moves toward it.";
+                    //    spawnedNPCs[2].GetComponent<SteeringBehavior>().target = spawnedNPCs[3].GetComponent<NPCController>();
+                    //    SetArrive(spawnedNPCs[2]);
+                    //    SetArrive(spawnedNPCs[3]);
+                    //    Invoke("Meeting2", 7);
+                    //    currentPhase++;
+                    //}
+                break;
                 case 3:
                     if (Vector3.Distance(spawnedNPCs[2].transform.position, house.transform.position) < 12)
                     {
@@ -220,8 +222,8 @@ public class MapStateManager : MonoBehaviour {
     private void EnterMapStateOne() {
         narrator.text = "MapState one";
 
-        currentPhase = 4;
-        previousPhase = 4;
+        currentPhase = 1;
+        previousPhase = 1;
 
         spawnedNPCs.ForEach(Destroy);
 
@@ -235,11 +237,20 @@ public class MapStateManager : MonoBehaviour {
 
     private void EnterMapStateTwo()
     {
-        narrator.text = "Entering Phase Two";
+        narrator.text = "MapState Two";
 
-        currentPhase = 3; // or whatever. Won't necessarily advance the phase every time
+        currentPhase = 2;
+        previousPhase = 2;
 
-        //spawnedNPCs.Add(SpawnItem(spawner2, WolfPrefab, null, SpawnText2, 4));
+        spawnedNPCs.ForEach(Destroy);
+
+        GameObject wolf = SpawnItem(spawner2, WolfPrefab, null, SpawnText2, 2);
+        GameObject hunter = SpawnItem(spawner1, HunterPrefab, wolf.GetComponent<NPCController>(), SpawnText1, 2);
+        wolf.GetComponent<SteeringBehavior>().target = hunter.GetComponent<NPCController>();
+
+
+        spawnedNPCs.Add(hunter);
+        spawnedNPCs.Add(wolf);
     }
 
     private void EnterMapStateThree()

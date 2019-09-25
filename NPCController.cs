@@ -36,6 +36,14 @@ public class NPCController : MonoBehaviour {
         ray = GetComponent<LineRenderer>();
         position = rb.position;
         orientation = transform.eulerAngles.y;
+        if (ai.tag == "Hunter")
+        {
+            orientation = transform.eulerAngles.y-300;
+        }
+        else
+        {
+            orientation = transform.eulerAngles.y + 300;
+        }
     }
 
     /// <summary>
@@ -53,10 +61,10 @@ public class NPCController : MonoBehaviour {
                 if (ai.tag == "Hunter")
                 {
                     
-                    linear = ai.maxSpeed * new Vector3(Mathf.Sin(ai.GetComponent<NPCController>().orientation), 0, Mathf.Cos(ai.GetComponent<NPCController>().orientation));
+                    linear = ai.maxAcceleration * new Vector3(Mathf.Sin(ai.GetComponent<NPCController>().orientation), 0, Mathf.Cos(ai.GetComponent<NPCController>().orientation));
                     //angular = ai.Wander();
                     //ai.PerformWhisker();
-                    (linear,angular) = ai.WanderWithAvoidence();
+                    (linear,angular) = ai.WanderWithAvoidance();
                     
                     //RaycastHit hitInfo;
                     //if (ai.PerformWhisker(out hitInfo))
@@ -72,7 +80,21 @@ public class NPCController : MonoBehaviour {
                 break;
             case 2:
                 if (label) {
-                    label.text = name.Replace("(Clone)", "") + "\nAlgorithm: Second algorithm";
+                    label.text = "";
+                    if (ai.tag == "Hunter")
+                    {
+                        //linear = ai.maxAcceleration * new Vector3(Mathf.Sin(ai.GetComponent<NPCController>().orientation+2f), 0, Mathf.Cos(ai.GetComponent<NPCController>().orientation+2f));
+                        //ai.GetComponent<SteeringBehavior>().agent.transform.eulerAngles.y = 180f;
+
+                    }
+                    if (ai.tag == "Wolf")
+                    {
+                        //linear = ai.maxAcceleration * new Vector3(Mathf.Sin(ai.GetComponent<NPCController>().orientation - 2f), 0, Mathf.Cos(ai.GetComponent<NPCController>().orientation - 2f));
+
+                    }
+                    (linear,angular) = ai.CollisionPrediction();
+                    
+                    //angular = ai.FaceAway();
                 }
 
                 // linear = ai.whatever();  -- replace with the desired calls
@@ -188,6 +210,29 @@ public class NPCController : MonoBehaviour {
         line.SetPosition(2, orig);
         line.SetPosition(3, right);
         line.SetPosition(4, orig);
+
+
+        //line.positionCount = 2;
+        //line.useWorldSpace = true;
+
+        //line.SetPosition(0, right);
+        //line.SetPosition(1, orig);
+        //line.SetPosition(2, orig);
+        //line.SetPosition(3, right);
+        //line.SetPosition(4, orig);
+    }
+    public void Draw3Whiskers(Vector3 left, Vector3 mid, Vector3 right, Vector3 orig)
+    {
+        line.positionCount = 7;
+        line.useWorldSpace = true;
+
+        line.SetPosition(0, orig);
+        line.SetPosition(1, left);
+        line.SetPosition(2, orig);
+        line.SetPosition(3, mid);
+        line.SetPosition(4, orig);
+        line.SetPosition(5, right);
+        line.SetPosition(6, orig);
 
 
         //line.positionCount = 2;

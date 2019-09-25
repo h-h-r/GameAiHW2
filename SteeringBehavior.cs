@@ -139,16 +139,21 @@ public class SteeringBehavior : MonoBehaviour {
         //hhr
         Vector3 faceDir = new Vector3(Mathf.Sin(agent.orientation), 0, Mathf.Cos(agent.orientation));
         faceDir.Normalize();
-        Vector3 leftDir = new Vector3(Mathf.Sin(agent.orientation - 0.3f), 0, Mathf.Cos(agent.orientation - 0.3f));
+        Vector3 leftDir = new Vector3(Mathf.Sin(agent.orientation - 0.7f), 0, Mathf.Cos(agent.orientation - 0.7f));
         leftDir.Normalize();
-        Vector3 rightDir = new Vector3(Mathf.Sin(agent.orientation + 0.3f), 0, Mathf.Cos(agent.orientation + 0.3f));
+        Vector3 rightDir = new Vector3(Mathf.Sin(agent.orientation + 0.7f), 0, Mathf.Cos(agent.orientation + 0.7f));
         rightDir.Normalize();
+
+      
+
         Vector3 raySource = agent.position;
         raySource = new Vector3(raySource.x, 0, raySource.z);
-        agent.DrawWhiskers(agent.position + leftDir * wanderOffset, agent.position + rightDir * wanderOffset, raySource);
+        //agent.DrawWhiskers(agent.position + leftDir * wanderOffset, agent.position + rightDir * wanderOffset, raySource);
+        agent.Draw3Whiskers(agent.position + leftDir * wanderOffset *0.5f, agent.position + faceDir * wanderOffset, agent.position + rightDir * wanderOffset*0.5f, raySource);
         //Debug.Log("orientation:"+agent.orientation);
+        
         RaycastHit hitL;
-        if (Physics.Raycast(raySource, leftDir, out hitL, wanderOffset))
+        if (Physics.Raycast(raySource, leftDir, out hitL, wanderOffset/2))
         {
             //Debug.Log(hitL.collider.name);
             agent.label.text = "<==: " + hitL.collider.name;
@@ -156,11 +161,19 @@ public class SteeringBehavior : MonoBehaviour {
             return true;
         }
         RaycastHit hitR;
-        if (Physics.Raycast(raySource, rightDir, out hitR, wanderOffset))
+        if (Physics.Raycast(raySource, rightDir, out hitR, wanderOffset/2))
         {
             //Debug.Log(hitR.collider.name);
             agent.label.text = hitR.collider.name + "==>";
             hitInfo = hitR;
+            return true;
+        }
+        RaycastHit hitM;
+        if (Physics.Raycast(raySource, leftDir, out hitM, wanderOffset))
+        {
+            //Debug.Log(hitL.collider.name);
+            agent.label.text = "<" + hitM.collider.name + ">";
+            hitInfo = hitM;
             return true;
         }
         hitInfo = new RaycastHit();
@@ -264,6 +277,142 @@ public class SteeringBehavior : MonoBehaviour {
 
     }
 
+    //collisionprediction
+    public (Vector3,float) CollisionPrediction()
+    {
+        Vector3 dp = target.position - agent.position;
+        Vector3 dv = target.velocity - agent.velocity;
+        float tClosest = -Vector3.Dot(dp, dv)/(dv.magnitude * dv.magnitude);
+        Debug.Log(tClosest);
+        Vector3 p_agent = agent.position + agent.velocity * tClosest;
+        Vector3 p_target = target.position + target.velocity * tClosest;
+        if (tClosest > 0)
+        {
+            agent.DrawCircle(p_agent, 0.1f);
+        }
+        if ((p_agent - p_target).magnitude < 3 && tClosest > 0 && tClosest<2)
+        {
+            Debug.Log("evation!!!");
+            //perform evation
+            Vector3 linear_acc = agent.position - p_agent ;
+
+            //clip to max linear acceleration
+            //if (linear_acc.magnitude > this.maxAcceleration)
+            //{
+                linear_acc = linear_acc.normalized * maxAcceleration;
+            //}
+
+            //clip to max speed is handled in the UpdateMovement in NPCController.cs 
+            //angular acceleration will be handled by face()
+            //Debug.Log("linear_ACC!!!"+linear_acc);
+
+
+            Vector3 direction = agent.position - p_agent; //only diff with face
+
+            // Check for a zero direction, and make no change if so
+            //if (direction.magnitude == 0)
+            //{
+            //    return 0;
+            //}
+
+            // Get anount of angle need to rotate
+            float rotationAmount = Mathf.Atan2(direction.x, direction.z) - agent.orientation;
+            //agent.orientaion range [-inf,inf]
+
+            // clip to (-pi, pi) interval
+            while (rotationAmount > Mathf.PI)
+            {
+                rotationAmount -= 2 * Mathf.PI;
+            }
+            while (rotationAmount < -Mathf.PI)
+            {
+                rotationAmount += 2 * Mathf.PI;
+            }
+
+            // if already facing target, set angular speed to zero
+            if (Mathf.Abs(rotationAmount) < targetRadiusA)
+            {
+                agent.rotation = 0;
+            }
+
+            // greater than slowRadius => clip to max rotation speed
+            // less than slowRadius => clip to scaled rotation speed 
+            float rotationSpeed = (rotationAmount > slowRadiusA ? maxRotation : maxRotation * Mathf.Abs(rotationAmount) / slowRadiusA);
+
+            // get the correct rotation direction
+            rotationSpeed *= rotationAmount / Mathf.Abs(rotationAmount);
+
+            // calculate the rotation acceleration
+            float angular_acc = rotationSpeed - agent.rotation;
+            angular_acc /= timeToTarget;
+
+            // clip to max angular acc if needed
+            if (Mathf.Abs(angular_acc) > maxAngularAcceleration)
+            {
+                angular_acc /= Mathf.Abs(angular_acc);
+                angular_acc *= maxAngularAcceleration;
+            }
+
+            return (linear_acc,angular_acc);
+
+
+            //return linear_acc;
+
+        }
+        //agent.orientation = 0;
+        return (maxAcceleration * new Vector3(Mathf.Sin(agent.orientation), 0, Mathf.Cos(agent.orientation)) , 0f) ;
+    }
+
+    public float FaceAway()
+    {
+        Vector3 direction = agent.position - target.position; //only diff with face
+
+        // Check for a zero direction, and make no change if so
+        if (direction.magnitude == 0)
+        {
+            return 0;
+        }
+
+        // Get anount of angle need to rotate
+        float rotationAmount = Mathf.Atan2(direction.x, direction.z) - agent.orientation;
+        //agent.orientaion range [-inf,inf]
+
+        // clip to (-pi, pi) interval
+        while (rotationAmount > Mathf.PI)
+        {
+            rotationAmount -= 2 * Mathf.PI;
+        }
+        while (rotationAmount < -Mathf.PI)
+        {
+            rotationAmount += 2 * Mathf.PI;
+        }
+
+        // if already facing target, set angular speed to zero
+        if (Mathf.Abs(rotationAmount) < targetRadiusA)
+        {
+            agent.rotation = 0;
+        }
+
+        // greater than slowRadius => clip to max rotation speed
+        // less than slowRadius => clip to scaled rotation speed 
+        float rotationSpeed = (rotationAmount > slowRadiusA ? maxRotation : maxRotation * Mathf.Abs(rotationAmount) / slowRadiusA);
+
+        // get the correct rotation direction
+        rotationSpeed *= rotationAmount / Mathf.Abs(rotationAmount);
+
+        // calculate the rotation acceleration
+        float angular_acc = rotationSpeed - agent.rotation;
+        angular_acc /= timeToTarget;
+
+        // clip to max angular acc if needed
+        if (Mathf.Abs(angular_acc) > maxAngularAcceleration)
+        {
+            angular_acc /= Mathf.Abs(angular_acc);
+            angular_acc *= maxAngularAcceleration;
+        }
+
+        return angular_acc;
+    }
 
     // ETC.
 
