@@ -187,7 +187,7 @@ public class SteeringBehavior : MonoBehaviour {
     }
 
     //return linear and angular acc
-    public (Vector3,float) WanderWithAvoidence()
+    public (Vector3,float) WanderWithAvoidance()
     {
         if (PerformWhisker(out hitInfo))
         {
