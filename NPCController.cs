@@ -36,15 +36,17 @@ public class NPCController : MonoBehaviour {
         ray = GetComponent<LineRenderer>();
         position = rb.position;
         orientation = transform.eulerAngles.y;
-        if (ai.tag == "Hunter")
-        {
-            orientation = transform.eulerAngles.y-300;
-        }
-        else
-        {
-            orientation = transform.eulerAngles.y + 300;
-        }
+        //if (ai.tag == "Hunter")
+        //{
+        //    orientation = transform.eulerAngles.y-300;
+        //}
+        //else
+        //{
+        //    orientation = transform.eulerAngles.y + 300;
+        //}
     }
+
+  
 
     /// <summary>
     /// Depending on the phase the demo is in, have the agent do the appropriate steering.
@@ -52,30 +54,77 @@ public class NPCController : MonoBehaviour {
     /// </summary>
     void FixedUpdate() {
         switch (phase) {
+            case 0:
+                if (label)
+                {
+                    label.text = tag;
+                }
+
+                // linear = ai.whatever();  -- replace with the desired calls
+                // angular = ai.whatever();
+                break;
             case 1:
                 if (label) {
                     // replace "First algorithm" with the name of the actual algorithm you're demoing
                     // do this for each phase
                     label.text = ""; 
                 }
-                if (ai.tag == "Hunter")
+                if (ai.tag == "Wolf")
                 {
-                    
-                    linear = ai.maxAcceleration * new Vector3(Mathf.Sin(ai.GetComponent<NPCController>().orientation), 0, Mathf.Cos(ai.GetComponent<NPCController>().orientation));
+
                     //angular = ai.Wander();
                     //ai.PerformWhisker();
-                    (linear,angular) = ai.WanderWithAvoidance();
-                    
-                    //RaycastHit hitInfo;
-                    //if (ai.PerformWhisker(out hitInfo))
-                    //{
-                    //    //perform avoidence
-                    //    ai.
-                    //}
-                    //else
-                    //{
-                    //    angular = ai.Wander();
-                    //}
+                    //(linear,angular) = ai.WanderWithAvoidance();
+                    linear = ai.maxAcceleration * new Vector3(Mathf.Sin(ai.GetComponent<NPCController>().orientation), 0, Mathf.Cos(ai.GetComponent<NPCController>().orientation));
+
+                    RaycastHit hitInfo;
+                    if (ai.PerformWhisker(out hitInfo) == true)
+                    {
+                        //seek new target based on hitinfo
+                        
+                        if (hitInfo.collider.name == "Tree(Clone)")
+                        {
+
+                            ai.avoidTree = true;
+                            ai.treePosition = hitInfo.point;
+                            linear = ai.Flee(ai.treePosition);
+                            angular = 0;
+                            angular = ai.FaceAway(position - ai.treePosition);
+                            label.text = "Tree!";
+                        }
+                        else //ray hit wall
+                        {
+                            (linear, angular) = ai.SeekAndFaceToNewTarget(hitInfo);
+                            label.text = "Wall!";
+                        }
+                    }
+                    else
+                    {
+                        if (ai.avoidTree == true)
+                        {
+                            if ((position - ai.treePosition).magnitude < ai.treeEscapeRadius)
+                            {
+                                linear = ai.Flee(ai.treePosition);
+                                angular = 0;
+                                angular = ai.FaceAway(position - ai.treePosition);
+                                label.text = "Tree!";
+                            }
+                            else
+                            {
+                                ai.avoidTree = false;
+                            }
+
+                        }
+                        else
+                        {
+                            angular = ai.Wander();
+                            label.text = "Wander";
+                        }
+                    }
+
+                   
+                   
+
                 }
                 break;
             case 2:
@@ -85,6 +134,7 @@ public class NPCController : MonoBehaviour {
                     {
                         //linear = ai.maxAcceleration * new Vector3(Mathf.Sin(ai.GetComponent<NPCController>().orientation+2f), 0, Mathf.Cos(ai.GetComponent<NPCController>().orientation+2f));
                         //ai.GetComponent<SteeringBehavior>().agent.transform.eulerAngles.y = 180f;
+                        //ai.see
 
                     }
                     if (ai.tag == "Wolf")
@@ -92,7 +142,9 @@ public class NPCController : MonoBehaviour {
                         //linear = ai.maxAcceleration * new Vector3(Mathf.Sin(ai.GetComponent<NPCController>().orientation - 2f), 0, Mathf.Cos(ai.GetComponent<NPCController>().orientation - 2f));
 
                     }
-                    (linear,angular) = ai.CollisionPrediction();
+                    linear = ai.Seek();
+
+                    //(linear,angular) = ai.CollisionPrediction();
                     
                     //angular = ai.FaceAway();
                 }
@@ -178,18 +230,19 @@ public class NPCController : MonoBehaviour {
     /// <param name="position">position relative to the center point of the NPC</param>
     /// <param name="radius">>Desired radius of the circle</param>
     public void DrawCircle(Vector3 position, float radius) {
-        line.positionCount = 51;
+        this.DestroyPoints();
+        line.positionCount = 21;
         line.useWorldSpace = true;
         float x;
         float z;
         float angle = 20f;
 
-        for (int i = 0; i < 51; i++) {
+        for (int i = 0; i < 21; i++) {
             x = Mathf.Sin(Mathf.Deg2Rad * angle) * radius;
             z = Mathf.Cos(Mathf.Deg2Rad * angle) * radius;
 
             line.SetPosition(i, new Vector3(x, 0, z)+position);
-            angle += (360f / 51);
+            angle += (360f / 21);
         }
     }
 
@@ -200,7 +253,17 @@ public class NPCController : MonoBehaviour {
     }
 
     //hhr
-    public void DrawWhiskers(Vector3 left, Vector3 right, Vector3 orig)
+    public void Draw1Whiskers(Vector3 start, Vector3 end)
+    {
+        line.positionCount = 2;
+        line.useWorldSpace = true;
+
+        line.SetPosition(0, start);
+        line.SetPosition(1, end);
+    
+    }
+
+    public void Draw2Whiskers(Vector3 left, Vector3 right, Vector3 orig)
     {
         line.positionCount = 5;
         line.useWorldSpace = true;
@@ -211,15 +274,6 @@ public class NPCController : MonoBehaviour {
         line.SetPosition(3, right);
         line.SetPosition(4, orig);
 
-
-        //line.positionCount = 2;
-        //line.useWorldSpace = true;
-
-        //line.SetPosition(0, right);
-        //line.SetPosition(1, orig);
-        //line.SetPosition(2, orig);
-        //line.SetPosition(3, right);
-        //line.SetPosition(4, orig);
     }
     public void Draw3Whiskers(Vector3 left, Vector3 mid, Vector3 right, Vector3 orig)
     {
@@ -234,14 +288,7 @@ public class NPCController : MonoBehaviour {
         line.SetPosition(5, right);
         line.SetPosition(6, orig);
 
-
-        //line.positionCount = 2;
-        //line.useWorldSpace = true;
-
-        //line.SetPosition(0, right);
-        //line.SetPosition(1, orig);
-        //line.SetPosition(2, orig);
-        //line.SetPosition(3, right);
-        //line.SetPosition(4, orig);
     }
+
+
 }

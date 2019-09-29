@@ -64,10 +64,10 @@ public class MapStateManager : MonoBehaviour {
         SpawnTrees(TreeCount);
 
         spawnedNPCs = new List<GameObject>();
-        spawnedNPCs.Add(SpawnItem(spawner1, HunterPrefab, null, SpawnText1, 4));
-        
-        Invoke("SpawnWolf", 5);
-        Invoke("Meeting1", 10);
+        //spawnedNPCs.Add(SpawnItem(spawner1, HunterPrefab, null, SpawnText1, 4));
+        //Invoke("SpawnWolf", 1);
+        //Invoke("Meeting1", 2);
+        EnterMapStateZero();
     }
 
     /// <summary>
@@ -131,15 +131,16 @@ public class MapStateManager : MonoBehaviour {
         switch (currentPhase)
             {
                 case 0:
-                    if (spawnedNPCs.Count > 1 && Vector3.Distance(spawnedNPCs[1].transform.position, spawnedNPCs[0].transform.position) < 12)
-                    {
-                        narrator.text = "The Hunter spots the wolf and believes it is his target. The Wolf runs.";
-                        spawnedNPCs[0].GetComponent<SteeringBehavior>().target = spawnedNPCs[1].GetComponent<NPCController>();
-                        spawnedNPCs[1].GetComponent<SteeringBehavior>().target = spawnedNPCs[0].GetComponent<NPCController>();
-                        spawnedNPCs[0].GetComponent<NPCController>().phase = 1;
-                        spawnedNPCs[1].GetComponent<NPCController>().phase = 2;
-                        currentPhase++;
-                    }
+                //if (spawnedNPCs.Count > 1 && Vector3.Distance(spawnedNPCs[1].transform.position, spawnedNPCs[0].transform.position) < 12)
+                //{
+                //    narrator.text = "The Hunter spots the wolf and believes it is his target. The Wolf runs.";
+                //    spawnedNPCs[0].GetComponent<SteeringBehavior>().target = spawnedNPCs[1].GetComponent<NPCController>();
+                //    spawnedNPCs[1].GetComponent<SteeringBehavior>().target = spawnedNPCs[0].GetComponent<NPCController>();
+                //    spawnedNPCs[0].GetComponent<NPCController>().phase = 1;
+                //    spawnedNPCs[1].GetComponent<NPCController>().phase = 2;
+                //    currentPhase++;
+                //}
+                    EnterMapStateZero();
                     break;
                 case 1:
                     narrator.text = "pressed 1";
@@ -212,7 +213,17 @@ public class MapStateManager : MonoBehaviour {
 
     private void EnterMapStateZero()
     {
-        narrator.text = "In Phase Zero, we're going to ...";
+        narrator.text = "Mapstate Zero\nHunter and Wolf";
+
+        currentPhase = 0; // or whatever. Won't necessarily advance the phase every time
+        previousPhase = 0;
+
+        spawnedNPCs.ForEach(Destroy);
+        GameObject wolf = SpawnItem(spawner2, WolfPrefab, null, SpawnText1, 0);
+        GameObject hunter = SpawnItem(spawner1, HunterPrefab, null, SpawnText2, 0);
+
+        spawnedNPCs.Add(hunter);
+        spawnedNPCs.Add(wolf);
 
         //currentPhase = 2; // or whatever. Won't necessarily advance the phase every time
 
@@ -227,9 +238,14 @@ public class MapStateManager : MonoBehaviour {
 
         spawnedNPCs.ForEach(Destroy);
 
-        GameObject wolf = SpawnItem(spawner2, WolfPrefab, null, SpawnText2, 1);
-        GameObject hunter = SpawnItem(spawner1, HunterPrefab, wolf.GetComponent<NPCController>(), SpawnText1, 1);
+        //GameObject wolf = SpawnItem(spawner2, WolfPrefab, null, SpawnText2, 1);
+        //GameObject hunter = SpawnItem(spawner1, HunterPrefab, wolf.GetComponent<NPCController>(), SpawnText1, 1);
+        //wolf.GetComponent<SteeringBehavior>().target = hunter.GetComponent<NPCController>();
 
+        GameObject hunter = SpawnItem(spawner1, HunterPrefab, null, SpawnText1, 1);
+        GameObject wolf = SpawnItem(spawner2, WolfPrefab, hunter.GetComponent<NPCController>(), SpawnText2, 1);
+        
+        hunter.GetComponent<SteeringBehavior>().target = wolf.GetComponent<NPCController>();
 
         spawnedNPCs.Add(hunter);
         spawnedNPCs.Add(wolf);
@@ -314,7 +330,7 @@ public class MapStateManager : MonoBehaviour {
             GameObject temp = Instantiate(TreePrefab, position, Quaternion.identity);
 
             // diameter will be somewhere between .2 and .7 for both X and Z:
-            diameter = UnityEngine.Random.Range(0.2F, 0.7F);
+            diameter = UnityEngine.Random.Range(0.5F, 0.1F);
             temp.transform.localScale = new Vector3(diameter, 1.0F, diameter);
 
             trees.Add(temp);

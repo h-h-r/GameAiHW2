@@ -39,8 +39,13 @@ public class SteeringBehavior : MonoBehaviour {
     private float wanderOrientation;
 
     //hw2 haoran
-    private float avoidDistance;
     private RaycastHit hitInfo;
+    public float whiskerLength;
+    public float sideWhiskerScale;
+    public float whiskerAngle;
+    public bool avoidTree;
+    public  Vector3 treePosition;
+    public float treeEscapeRadius;
 
     // Holds the path to follow
     public GameObject[] Path;
@@ -51,6 +56,70 @@ public class SteeringBehavior : MonoBehaviour {
         wanderOrientation = agent.orientation;
     }
 
+    
+    //Haoran
+    //return angular acc
+    public float FaceAway()
+    {
+        Vector3 direction = agent.position - target.position; //only diff with face
+        return FaceAway(direction);
+    }
+
+    //Haoran
+    // Calculate the angular acceleration required to rotate to target
+    //return angular acc
+    public float FaceAway(Vector3 direction)
+    {
+        //// Check for a zero direction, and make no change if so
+        if (direction.magnitude <= 0.001f)
+        {
+            return 0;
+        }
+
+        // Get anount of angle need to rotate
+        float rotationAmount = Mathf.Atan2(direction.x, direction.z) - agent.orientation;
+        //agent.orientaion range [-inf,inf]
+
+        // clip to (-pi, pi) interval
+        while (rotationAmount > Mathf.PI)
+        {
+            rotationAmount -= 2 * Mathf.PI;
+        }
+        while (rotationAmount < -Mathf.PI)
+        {
+            rotationAmount += 2 * Mathf.PI;
+        }
+
+        // if already facing target, set angular speed to zero
+        if (Mathf.Abs(rotationAmount) < targetRadiusA)
+        {
+            agent.rotation = 0;
+        }
+
+        // greater than slowRadius => clip to max rotation speed
+        // less than slowRadius => clip to scaled rotation speed 
+        float rotationSpeed = (rotationAmount > slowRadiusA ? maxRotation : maxRotation * Mathf.Abs(rotationAmount) / slowRadiusA);
+
+        // get the correct rotation direction
+        rotationSpeed *= rotationAmount / Mathf.Abs(rotationAmount);
+
+        // calculate the rotation acceleration
+        float angular_acc = rotationSpeed - agent.rotation;
+        angular_acc /= timeToTarget;
+
+        // clip to max angular acc if needed
+        if (Mathf.Abs(angular_acc) > maxAngularAcceleration)
+        {
+            angular_acc /= Mathf.Abs(angular_acc);
+            angular_acc *= maxAngularAcceleration;
+        }
+
+        return angular_acc;
+    }
+
+    //Haoran
+    //seek target
+    //return linear acc
     public Vector3 Seek() {
         Vector3 linear_acc = target.position - agent.position; //seek direction vector
 
@@ -65,25 +134,46 @@ public class SteeringBehavior : MonoBehaviour {
         return linear_acc;  //returns the linear acc 
     }
 
+    //Haoran
+    //flee from target
+    //return linear acc
     public Vector3 Flee()
     {
-        return new Vector3(0f, 0f, 0f);
+        return Flee(target.position) ;
     }
 
+    //Haoran
+    //flee from given position
+    //return linear acc
+    public Vector3 Flee(Vector3 targetPosition)
+    {
+        agent.DrawCircle(targetPosition+ new Vector3(0f,1f,0f), treeEscapeRadius);
+        Vector3 linear_acc = agent.position - targetPosition;
 
-    // Calculate the target to pursue
-    public Vector3 Pursue() {
-        return new Vector3(0f, 0f, 0f);
+        //clip to max linear acceleration
+        if (linear_acc.magnitude > this.maxAcceleration)
+        {
+            linear_acc = linear_acc.normalized * maxAcceleration;
+        }
+
+        //clip to max speed is handled in the UpdateMovement in NPCController.cs 
+        //angular acceleration will be handled by face()
+
+        return linear_acc;
     }
 
+    //Haoran
     // Calculate the angular acceleration required to rotate to target
+    //return angular acc
     public float Face()
     {
-
         Vector3 direction = target.position - agent.position;
         return FaceTo(direction);
     }
 
+    //Haoran
+    //face to given direction
+    //return angular acc
     public float FaceTo(Vector3 direction) { 
         // Check for a zero direction, and make no change if so
         if (direction.magnitude == 0)
@@ -132,16 +222,17 @@ public class SteeringBehavior : MonoBehaviour {
         return angular_acc;
     }
 
-
-    //what we have: raycast collation point and normal of surface that ray hits
+    //Haoran
+    //Draw whiskers; Cast rays and check if ray hit any obstacles
+    //return true and assign value to hitInfo if one of whiskers hit obstacle
     public bool PerformWhisker(out RaycastHit hitInfo)
     {
         //hhr
         Vector3 faceDir = new Vector3(Mathf.Sin(agent.orientation), 0, Mathf.Cos(agent.orientation));
         faceDir.Normalize();
-        Vector3 leftDir = new Vector3(Mathf.Sin(agent.orientation - 0.7f), 0, Mathf.Cos(agent.orientation - 0.7f));
+        Vector3 leftDir = new Vector3(Mathf.Sin(agent.orientation - whiskerAngle), 0, Mathf.Cos(agent.orientation - whiskerAngle));
         leftDir.Normalize();
-        Vector3 rightDir = new Vector3(Mathf.Sin(agent.orientation + 0.7f), 0, Mathf.Cos(agent.orientation + 0.7f));
+        Vector3 rightDir = new Vector3(Mathf.Sin(agent.orientation + whiskerAngle), 0, Mathf.Cos(agent.orientation + whiskerAngle));
         rightDir.Normalize();
 
       
@@ -149,30 +240,36 @@ public class SteeringBehavior : MonoBehaviour {
         Vector3 raySource = agent.position;
         raySource = new Vector3(raySource.x, 0, raySource.z);
         //agent.DrawWhiskers(agent.position + leftDir * wanderOffset, agent.position + rightDir * wanderOffset, raySource);
-        agent.Draw3Whiskers(agent.position + leftDir * wanderOffset *0.5f, agent.position + faceDir * wanderOffset, agent.position + rightDir * wanderOffset*0.5f, raySource);
         //Debug.Log("orientation:"+agent.orientation);
         
         RaycastHit hitL;
-        if (Physics.Raycast(raySource, leftDir, out hitL, wanderOffset/2))
+        if (Physics.Raycast(raySource, leftDir, out hitL, whiskerLength* sideWhiskerScale))
         {
             //Debug.Log(hitL.collider.name);
-            agent.label.text = "<==: " + hitL.collider.name;
+            agent.Draw3Whiskers(agent.position + leftDir * whiskerLength * sideWhiskerScale, agent.position + faceDir * whiskerLength, agent.position + rightDir * whiskerLength * sideWhiskerScale, raySource);
+
+            //agent.label.text = "<==: " + hitL.collider.name;
             hitInfo = hitL;
             return true;
         }
         RaycastHit hitR;
-        if (Physics.Raycast(raySource, rightDir, out hitR, wanderOffset/2))
+        if (Physics.Raycast(raySource, rightDir, out hitR, whiskerLength* sideWhiskerScale))
         {
             //Debug.Log(hitR.collider.name);
-            agent.label.text = hitR.collider.name + "==>";
+            agent.Draw3Whiskers(agent.position + leftDir * whiskerLength * sideWhiskerScale, agent.position + faceDir * whiskerLength, agent.position + rightDir * whiskerLength * sideWhiskerScale, raySource);
+
+            //agent.label.text = hitR.collider.name + "==>";
             hitInfo = hitR;
             return true;
         }
         RaycastHit hitM;
-        if (Physics.Raycast(raySource, leftDir, out hitM, wanderOffset))
+        if (Physics.Raycast(raySource, leftDir, out hitM, whiskerLength))
         {
             //Debug.Log(hitL.collider.name);
-            agent.label.text = "<" + hitM.collider.name + ">";
+            agent.Draw3Whiskers(agent.position + leftDir * wanderOffset * sideWhiskerScale, agent.position + faceDir * wanderOffset, agent.position + rightDir * wanderOffset * sideWhiskerScale, raySource);
+
+            //agent.label.text = "<" + hitM.collider.name + ">";
+            
             hitInfo = hitM;
             return true;
         }
@@ -180,38 +277,29 @@ public class SteeringBehavior : MonoBehaviour {
         return false;
     }
 
+    //Haoran
+    //this function is supposed to be used after whiskers hitting the wall
+    //given hit point info, Calculate a new target position on the normal vector of the hit surface starting from hit point, then seek this new target.
+    //return linear_acc and angular_acc
     public (Vector3,float) SeekAndFaceToNewTarget(RaycastHit info)
     {
-        //calculate position of avoidence target
-        Vector3 newTarget = info.point + info.normal * wanderOffset * 4;
-        Vector3 linear_acc = newTarget - agent.position; //seek direction vector
+            //hit wall
+            //calculate position of avoidence target
+            Vector3 newTarget = info.point + info.normal * wanderOffset * 4; //calculate normal 
+            Vector3 linear_acc = newTarget - agent.position; //seek direction vector
 
-        //clip to max linear acceleration
-        if (linear_acc.magnitude > this.maxAcceleration)
-        {
-            linear_acc = linear_acc.normalized * maxAcceleration;
-        }
-
-        float anglular_acc = FaceTo(newTarget - agent.position);
-        return (linear_acc, anglular_acc);
-        //face
-
-
+            //clip to max linear acceleration
+            if (linear_acc.magnitude > this.maxAcceleration)
+            {
+                linear_acc = linear_acc.normalized * maxAcceleration;
+            }
+            float angular_acc = FaceTo(newTarget - agent.position);
+            return (linear_acc, angular_acc);
     }
 
-    //return linear and angular acc
-    public (Vector3,float) WanderWithAvoidance()
-    {
-        if (PerformWhisker(out hitInfo))
-        {
-            return SeekAndFaceToNewTarget(hitInfo);
-        }
-        Vector3 linear = maxSpeed * new Vector3(Mathf.Sin(agent.orientation), 0, Mathf.Cos(agent.orientation));
-        //angular = ai.Wander();
-        return (linear,Wander());
-    }
-
+    //Haoran 
     // wander returns the angular_acc(account for face direction) 
+    //return angular acc
     public float Wander()
     //    public float Wander(out Vector3 linear)
     {
@@ -277,7 +365,8 @@ public class SteeringBehavior : MonoBehaviour {
 
     }
 
-    //collisionprediction
+    //Haoran
+    //collision prediction
     public (Vector3,float) CollisionPrediction()
     {
         Vector3 dp = target.position - agent.position;
@@ -286,13 +375,15 @@ public class SteeringBehavior : MonoBehaviour {
         Debug.Log(tClosest);
         Vector3 p_agent = agent.position + agent.velocity * tClosest;
         Vector3 p_target = target.position + target.velocity * tClosest;
-        if (tClosest > 0)
+        if (tClosest > 0f)
         {
             agent.DrawCircle(p_agent, 0.1f);
         }
         if ((p_agent - p_target).magnitude < 3 && tClosest > 0 && tClosest<2)
+
         {
-            Debug.Log("evation!!!");
+            //Debug.Log("evation!!!");
+            agent.label.text = "evation!!!";
             //perform evation
             Vector3 linear_acc = agent.position - p_agent ;
 
@@ -359,60 +450,11 @@ public class SteeringBehavior : MonoBehaviour {
             //return linear_acc;
 
         }
-        //agent.orientation = 0;
+ 
         return (maxAcceleration * new Vector3(Mathf.Sin(agent.orientation), 0, Mathf.Cos(agent.orientation)) , 0f) ;
     }
 
-    public float FaceAway()
-    {
-        Vector3 direction = agent.position - target.position; //only diff with face
-
-        // Check for a zero direction, and make no change if so
-        if (direction.magnitude == 0)
-        {
-            return 0;
-        }
-
-        // Get anount of angle need to rotate
-        float rotationAmount = Mathf.Atan2(direction.x, direction.z) - agent.orientation;
-        //agent.orientaion range [-inf,inf]
-
-        // clip to (-pi, pi) interval
-        while (rotationAmount > Mathf.PI)
-        {
-            rotationAmount -= 2 * Mathf.PI;
-        }
-        while (rotationAmount < -Mathf.PI)
-        {
-            rotationAmount += 2 * Mathf.PI;
-        }
-
-        // if already facing target, set angular speed to zero
-        if (Mathf.Abs(rotationAmount) < targetRadiusA)
-        {
-            agent.rotation = 0;
-        }
-
-        // greater than slowRadius => clip to max rotation speed
-        // less than slowRadius => clip to scaled rotation speed 
-        float rotationSpeed = (rotationAmount > slowRadiusA ? maxRotation : maxRotation * Mathf.Abs(rotationAmount) / slowRadiusA);
-
-        // get the correct rotation direction
-        rotationSpeed *= rotationAmount / Mathf.Abs(rotationAmount);
-
-        // calculate the rotation acceleration
-        float angular_acc = rotationSpeed - agent.rotation;
-        angular_acc /= timeToTarget;
-
-        // clip to max angular acc if needed
-        if (Mathf.Abs(angular_acc) > maxAngularAcceleration)
-        {
-            angular_acc /= Mathf.Abs(angular_acc);
-            angular_acc *= maxAngularAcceleration;
-        }
-
-        return angular_acc;
-    }
+ 
 
     // ETC.
 
