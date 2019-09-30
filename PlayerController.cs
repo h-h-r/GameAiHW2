@@ -35,7 +35,15 @@ public class PlayerController : MonoBehaviour {
         Vector3 movement = new Vector3(moveHorizontal, 0.0f, moveVertical);
 
         //rb.AddForce (movement * speed);
+        //smoother movement with less acceleration
         rb.MovePosition(transform.position + (movement * speed * Time.deltaTime));   
     }
 
+    void OnMouseDrag() {
+        float distance = 10;
+        Vector3 mousePosition = new Vector3 (Input.mousePosition.x, Input.mousePosition.y, distance);
+        Vector3 objPosition = Camera.main.ScreenToWorldPoint (mousePosition);
+
+        transform.position = objPosition;
+    }
 }
