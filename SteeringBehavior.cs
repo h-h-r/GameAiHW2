@@ -13,6 +13,8 @@ public class SteeringBehavior : MonoBehaviour {
     public NPCController agent;
     public NPCController target;
 
+    public GameObject player;
+
     // Below are a bunch of variable declarations that will be used for the next few
     // assignments. Only a few of them are needed for the first assignment.
 
@@ -38,7 +40,8 @@ public class SteeringBehavior : MonoBehaviour {
     public float wanderRate;
     private float wanderOrientation;
 
-    //hw2 haoran
+    //Haoran
+    //hw2 
     private RaycastHit hitInfo;
     public float whiskerLength;
     public float sideWhiskerScale;
@@ -56,7 +59,109 @@ public class SteeringBehavior : MonoBehaviour {
         wanderOrientation = agent.orientation;
     }
 
-    
+    //Haoran
+    //dynamic arrive given direction
+    //return linear acc
+    public Vector3 ChasePlayer()
+    {
+
+        Vector3 direction = this.player.transform.position - agent.position;
+
+        if (direction.magnitude <= slowRadiusL)
+        {
+            agent.label.text = "chaseplayer\n<In slowRadiusL>";
+            //agent.DestroyPoints();
+            agent.DrawCircle(this.player.transform.position, slowRadiusL);
+        }
+        else
+        {
+            agent.DestroyPoints();
+        }
+
+        // stop if arrive (in target radius) and return zero linear_acc
+        if (direction.magnitude < targetRadiusA+2f)
+        {
+            agent.label.text = "Arrived!\n<In targetRadiusA>";
+            agent.velocity = Vector3.zero;
+            return Vector3.zero;
+        }
+
+        //calculate appropriate speed
+        float speed = (direction.magnitude > slowRadiusL ? maxSpeed : maxSpeed * direction.magnitude / slowRadiusL);
+
+        //apply direction
+        direction.Normalize();
+        Vector3 velocity = direction * speed;
+
+        // calculate linear_acc
+        Vector3 linear_acc = (velocity - agent.velocity) / timeToTarget;
+
+        // clip linear_acc
+        if (linear_acc.magnitude > maxAcceleration)
+        {
+            linear_acc.Normalize();
+            linear_acc *= maxAcceleration;
+        }
+
+        return linear_acc;
+    }
+
+
+    //Haoran
+    //dynamic arrive given target
+    //return linear acc
+    public Vector3 Arrive()
+    {
+        Vector3 direction = target.position - agent.position;
+        return Arrive(direction);
+    }
+
+    //Haoran
+    //dynamic arrive given direction
+    //return linear acc
+    public Vector3 Arrive(Vector3 direction)
+    {
+       // Vector3 direction = target.position - agent.position;
+
+        if (direction.magnitude <= slowRadiusL)
+        {
+            agent.label.text = "dynamic arrive\n<In slowRadiusL>";
+            //agent.DestroyPoints();
+            agent.DrawCircle(target.position, slowRadiusL);
+        }
+        else
+        {
+            agent.DestroyPoints();
+        }
+
+        // stop if arrive (in target radius) and return zero linear_acc
+        if (direction.magnitude < targetRadiusL)
+        {
+            agent.label.text = "dynamic arrive\n<In targetRadiusL>";
+            agent.velocity = Vector3.zero;
+            return Vector3.zero;
+        }
+
+        //calculate appropriate speed
+        float speed = (direction.magnitude > slowRadiusL ? maxSpeed : maxSpeed * direction.magnitude / slowRadiusL);
+
+        //apply direction
+        direction.Normalize();
+        Vector3 velocity = direction * speed;
+
+        // calculate linear_acc
+        Vector3 linear_acc = (velocity - agent.velocity) / timeToTarget;
+
+        // clip linear_acc
+        if (linear_acc.magnitude > maxAcceleration)
+        {
+            linear_acc.Normalize();
+            linear_acc *= maxAcceleration;
+        }
+
+        return linear_acc;
+    }
+
     //Haoran
     //return angular acc
     public float FaceAway()
@@ -169,6 +274,57 @@ public class SteeringBehavior : MonoBehaviour {
     {
         Vector3 direction = target.position - agent.position;
         return FaceTo(direction);
+    }
+
+
+    public float FaceToPlayer()
+    {
+        Vector3 direction = player.transform.position - agent.position;
+        // Check for a zero direction, and make no change if so
+        if (direction.magnitude == 0)
+        {
+            return 0;
+        }
+
+        // Get anount of angle need to rotate
+        float rotationAmount = Mathf.Atan2(direction.x, direction.z) - agent.orientation;
+        //agent.orientaion range [-inf,inf]
+
+        // clip to (-pi, pi) interval
+        while (rotationAmount > Mathf.PI)
+        {
+            rotationAmount -= 2 * Mathf.PI;
+        }
+        while (rotationAmount < -Mathf.PI)
+        {
+            rotationAmount += 2 * Mathf.PI;
+        }
+
+        // if already facing target, set angular speed to zero
+        if (Mathf.Abs(rotationAmount) < targetRadiusA)
+        {
+            agent.rotation = 0;
+        }
+
+        // greater than slowRadius => clip to max rotation speed
+        // less than slowRadius => clip to scaled rotation speed 
+        float rotationSpeed = (rotationAmount > slowRadiusA ? maxRotation : maxRotation * Mathf.Abs(rotationAmount) / slowRadiusA);
+
+        // get the correct rotation direction
+        rotationSpeed *= rotationAmount / Mathf.Abs(rotationAmount);
+
+        // calculate the rotation acceleration
+        float angular_acc = rotationSpeed - agent.rotation;
+        angular_acc /= timeToTarget;
+
+        // clip to max angular acc if needed
+        if (Mathf.Abs(angular_acc) > maxAngularAcceleration)
+        {
+            angular_acc /= Mathf.Abs(angular_acc);
+            angular_acc *= maxAngularAcceleration;
+        }
+
+        return angular_acc;
     }
 
     //Haoran
