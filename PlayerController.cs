@@ -28,17 +28,17 @@ public class PlayerController : MonoBehaviour {
     /// useful later on.
     /// </summary>
     void FixedUpdate() {
-       
         float moveHorizontal = Input.GetAxis("Horizontal");
         float moveVertical = Input.GetAxis("Vertical");
 
         Vector3 movement = new Vector3(moveHorizontal, 0.0f, moveVertical);
 
-        //rb.AddForce (movement * speed);
+        rb.AddForce (movement * speed);
         //smoother movement with less acceleration
-        rb.MovePosition(transform.position + (movement * speed * Time.deltaTime));   
+        //rb.MovePosition(transform.position + (movement * speed * Time.deltaTime));   
     }
 
+    /* 
     void OnMouseDrag() {
         float distance = 10;
         Vector3 mousePosition = new Vector3 (Input.mousePosition.x, Input.mousePosition.y, distance);
@@ -46,4 +46,18 @@ public class PlayerController : MonoBehaviour {
 
         transform.position = objPosition;
     }
+    */
+    private Vector3 screenPoint;
+	private Vector3 offset;
+		
+	void OnMouseDown(){
+		screenPoint = Camera.main.WorldToScreenPoint(gameObject.transform.position);
+		offset = gameObject.transform.position - Camera.main.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y, screenPoint.z));
+	}
+		
+	void OnMouseDrag(){
+		Vector3 cursorPoint = new Vector3(Input.mousePosition.x, Input.mousePosition.y, screenPoint.z);
+		Vector3 cursorPosition = Camera.main.ScreenToWorldPoint(cursorPoint) + offset;
+		transform.position = cursorPosition;
+	}
 }
