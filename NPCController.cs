@@ -171,7 +171,7 @@ public class NPCController : MonoBehaviour {
                             {
                                 linear = ai.ChasePlayer();
                                 angular = ai.FaceToPlayer();
-                                label.text = "chase player";
+                                //label.text = "chase player";
                             }
                         }
                         

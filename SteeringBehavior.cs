@@ -135,9 +135,9 @@ public class SteeringBehavior : MonoBehaviour {
         }
 
         // stop if arrive (in target radius) and return zero linear_acc
-        if (direction.magnitude < targetRadiusL)
+        if (direction.magnitude < targetRadiusA)
         {
-            agent.label.text = "dynamic arrive\n<In targetRadiusL>";
+            agent.label.text = "dynamic arrive\n<In targetRadiusA>";
             agent.velocity = Vector3.zero;
             return Vector3.zero;
         }
