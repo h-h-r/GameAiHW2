@@ -68,54 +68,8 @@ public class NPCController : MonoBehaviour {
                 }
                 if (ai.tag == "Wolf")
                 {
-
-                    linear = ai.maxAcceleration * new Vector3(Mathf.Sin(ai.GetComponent<NPCController>().orientation), 0, Mathf.Cos(ai.GetComponent<NPCController>().orientation));
-
-                    RaycastHit hitInfo;
-                    if (ai.PerformWhisker(out hitInfo) == true)
-                    {
-                        //seek new target based on hitinfo
-                        
-                        if (hitInfo.collider.name == "Tree(Clone)")
-                        {
-
-                            ai.avoidTree = true;
-                            ai.treePosition = hitInfo.point;
-                            linear = ai.Flee(ai.treePosition);
-                            angular = 0;
-                            angular = ai.FaceAway( position - ai.treePosition);
-                            label.text = "Tree Avoidence";
-                        }
-                        else //ray hit wall 
-                        {
-                            (linear, angular) = ai.SeekAndFaceToNewTarget(hitInfo);
-                            label.text = "Wall Avoidence";
-                        }
-                    }
-                    else
-                    {
-                        if (ai.avoidTree == true)
-                        {
-                            if ((position - ai.treePosition).magnitude < ai.treeEscapeRadius)
-                            {
-                                linear = ai.Flee(ai.treePosition);
-                                angular = 0;
-                                angular = ai.FaceAway(position - ai.treePosition);
-                                label.text = "Tree Avoidence";
-                            }
-                            else
-                            {
-                                ai.avoidTree = false;
-                            }
-
-                        }
-                        else
-                        {
-                            angular = ai.Wander();
-                            label.text = "Chase player\n";
-                        }
-                    }
-
+                    label.text = "Wander";
+                    (linear, angular) = Algo("Wander");
                 }
                 break;
 
@@ -124,71 +78,38 @@ public class NPCController : MonoBehaviour {
                     label.text = "";
                     if (ai.tag == "Hunter")
                     {    
+                      
                     }
                     if (ai.tag == "Wolf")
                     {
-                        linear = ai.maxAcceleration * new Vector3(Mathf.Sin(ai.GetComponent<NPCController>().orientation), 0, Mathf.Cos(ai.GetComponent<NPCController>().orientation));
-
-                        RaycastHit hitInfo;
-                        if (ai.PerformWhisker(out hitInfo) == true && hitInfo.collider.tag != "Player")
-                        {
-                            //seek new target based on hitinfo
-
-                            if (hitInfo.collider.name == "Tree(Clone)")
-                            {
-
-                                ai.avoidTree = true;
-                                ai.treePosition = hitInfo.point;
-                                linear = ai.Flee(ai.treePosition);
-                                angular = 0;
-                                angular = ai.FaceAway(position - ai.treePosition);
-                                label.text = "Tree Avoidence";
-                            }
-                            else //ray hit wall 
-                            {
-                                (linear, angular) = ai.SeekAndFaceToNewTarget(hitInfo);
-                                label.text = "Wall Avoidence";
-                            }
-                        }
-                        else
-                        {
-                            if (ai.avoidTree == true)
-                            {
-                                if ((position - ai.treePosition).magnitude < ai.treeEscapeRadius)
-                                {
-                                    linear = ai.Flee(ai.treePosition);
-                                    angular = 0;
-                                    angular = ai.FaceAway(position - ai.treePosition);
-                                    label.text = "Tree Avoidence";
-                                }
-                                else
-                                {
-                                    ai.avoidTree = false;
-                                }
-
-                            }
-                            else
-                            {
-                                linear = ai.ChasePlayer();
-                                angular = ai.FaceToPlayer();
-                                //label.text = "chase player";
-                            }
-                        }
-                        
+                        label.text = "Chase Player";
+                        (linear, angular) = Algo("ChasePlayer");
                     }
-                    //linear = ai.Seek();
-
-                    //(linear,angular) = ai.CollisionPrediction();
-                    
-                    //angular = ai.FaceAway();
                 }
 
                 // linear = ai.whatever();  -- replace with the desired calls
                 // angular = ai.whatever();
                 break;
             case 3:
-                if (label) {
-                    label.text = name.Replace("(Clone)", "") + "\nAlgorithm: Third algorithm";
+                if (label)
+                {
+                    label.text = "";
+                    if (ai.tag == "Hunter")
+                    {
+                        label.text = "Dynamic pursue";
+                        (linear, angular) = Algo("Pursue");
+                    }
+                    if (ai.tag == "Wolf")
+                    {
+                        label.text = "Dynamic Evade";
+                        (linear, angular) = Algo("Evade");
+
+                    }
+                    //linear = ai.Seek();
+
+                    //(linear,angular) = ai.CollisionPrediction();
+
+                    //angular = ai.FaceAway();
                 }
 
                 // linear = ai.whatever();  -- replace with the desired calls
@@ -196,8 +117,22 @@ public class NPCController : MonoBehaviour {
                 break;
             case 4:
                 if (label) {
-                    label.text = name.Replace("(Clone)", "") + "\nAlgorithm: Fourth algorithm";
+                    label.text = "";
                 }
+                Vector3 collisionPoint;
+                if (ai.CollisionPrediction(out collisionPoint) == true)
+                {
+                    DrawCircle(collisionPoint, 0.1f);
+                    linear = ai.Evade(collisionPoint);
+                    label.text = "Evade from the pridicted circle!";
+                    angular = ai.FaceAway();
+                }
+                else
+                {
+                    (linear, angular) = Algo("ChasePlayer");
+                }
+
+                
 
                 // linear = ai.whatever();  -- replace with the desired calls
                 // angular = ai.whatever();
@@ -324,5 +259,90 @@ public class NPCController : MonoBehaviour {
 
     }
 
+    public (Vector3,float) Algo(string algo)
+    {
+        float angular = 0f;
+        //default linear acc
+        Vector3 linear = ai.maxAcceleration * new Vector3(Mathf.Sin(ai.GetComponent<NPCController>().orientation), 0, Mathf.Cos(ai.GetComponent<NPCController>().orientation));
+
+        RaycastHit hitInfo;
+        //if (ai.PerformWhisker(out hitInfo) == true && hitInfo.collider.tag != "Player")
+        //if ((ai.PerformWhiskerAlongVelocity(out hitInfo) == true) && hitInfo.collider.tag != "Player" && hitInfo.collider.tag != ai.tag)
+
+        if (( ai.PerformWhisker(out hitInfo) == true) && hitInfo.collider.tag != "Player" && hitInfo.collider.tag != ai.tag)
+        {
+            //seek new target based on hitinfo
+            if (hitInfo.collider.name == "Tree(Clone)")
+            {
+                ai.avoidTree = true;
+                ai.treePosition = hitInfo.point;
+                linear = ai.Flee(ai.treePosition);
+                angular = ai.FaceAway(position - ai.treePosition);
+                label.text = "Tree Avoidence";
+            }
+            else //ray hit wall 
+            {
+                (linear, angular) = ai.SeekAndFaceToNewTarget(hitInfo);
+                label.text = "Wall Avoidence";
+            }
+        }
+        else if ((ai.PerformWhiskerAlongVelocity(out hitInfo) == true ) && hitInfo.collider.tag != "Player" && hitInfo.collider.tag != ai.tag)
+        {
+            //seek new target based on hitinfo
+            if (hitInfo.collider.name == "Tree(Clone)")
+            {
+                ai.avoidTree = true;
+                ai.treePosition = hitInfo.point;
+                linear = ai.Flee(ai.treePosition);
+                angular = ai.FaceAway(position - ai.treePosition);
+                label.text = "Tree Avoidence";
+            }
+            else //ray hit wall 
+            {
+                (linear, angular) = ai.SeekAndFaceToNewTarget(hitInfo);
+                label.text = "Wall Avoidence";
+            }
+        }
+        else
+        {
+            if (ai.avoidTree == true)
+            {
+                if ((position - ai.treePosition).magnitude < ai.treeEscapeRadius)
+                {
+                    linear = ai.Flee(ai.treePosition);
+                    angular = 0;
+                    angular = ai.FaceAway(position - ai.treePosition);
+                    label.text = "Tree Avoidence";
+                }
+                else
+                {
+                    ai.avoidTree = false;
+                }
+
+            }
+            else
+            {
+                if (algo == "Pursue")
+                {
+                    linear = ai.Pursue();
+                    angular = ai.Face();
+                    
+                }else if (algo == "Evade")
+                {
+                    linear = ai.Evade();
+                    angular = ai.FaceAway();
+                }else if (algo == "ChasePlayer")
+                {
+                    linear = ai.ChasePlayer();
+                    angular = ai.FaceToPlayer();
+                }else if (algo == "Wander")
+                {
+                    angular = ai.Wander();
+                }
+                
+            }
+        }
+        return (linear,angular);
+    }
 
 }
